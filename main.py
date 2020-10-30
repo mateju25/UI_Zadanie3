@@ -1,13 +1,14 @@
 from math import sqrt
 import random
+from gui import make_gui
 
 NEW_INDIVIDUALS_PERCENTAGE = 10
 MUTATION_PERCENTAGE = 30
-CROSSOVER_PERCENTAGE = 50
+CROSSOVER_PERCENTAGE = 90
 
 NUMBER_OF_TOWNS = 10
-NUMBER_OF_INDIVIDUALS = 1000
-NUMBER_OF_GENERATIONS = 200
+NUMBER_OF_INDIVIDUALS = 500
+NUMBER_OF_GENERATIONS = 10000
 
 
 # nacita mapu zo suboru v tvare {i: [x, y], ...}
@@ -87,9 +88,9 @@ def do_simple_mutation(chromosome: []) -> list:
 def do_difficult_mutation(chromosome: []) -> list:
     reversed_seq = []
     # zvoli nahodnu dlzku retazca, ktory bude obrateny (od 2 po NUMBER_OF_TOWNS-1)
-    len_change = int(random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 2) + 2
+    len_change = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 2) + 2
     # zvoli nahodny zaciatok
-    start_index = int(random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - len_change + 1)
+    start_index = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - len_change + 1)
 
     for i in range(start_index, start_index + len_change):
         reversed_seq.insert(0, chromosome[i])
@@ -199,15 +200,23 @@ def create_society():
     print("Generacia: 0")
     print("Fitness: ", find_best_individual(generation)[0])
     print("Cesta: ", find_best_individual(generation)[1])
-
+    best = find_best_individual(generation)
     for i in range(1, NUMBER_OF_GENERATIONS):
         generation = create_next_generation_firstngood(generation, map_of_towns)
+        if find_best_individual(generation)[0] > best[0]:
+            best = find_best_individual(generation)
         #generation = create_next_generation_allrandom(generation, map_of_towns)
 
     print("Generacia: ", i)
     print("Fitness: ", find_best_individual(generation)[0])
     print("Cesta: ", find_best_individual(generation)[1])
 
+    print("-----------------------------------------\nNajlepsi:")
+    print("Fitness: ", best[0])
+    print("Cesta: ", best[1])
+    make_gui(best[1])
 
-random.seed(0)
+
+
+#random.seed(0)
 create_society()
