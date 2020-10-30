@@ -203,9 +203,10 @@ def create_society():
     best = find_best_individual(generation)
     for i in range(1, NUMBER_OF_GENERATIONS):
         generation = create_next_generation_firstngood(generation, map_of_towns)
+        # generation = create_next_generation_allrandom(generation, map_of_towns)
         if find_best_individual(generation)[0] > best[0]:
             best = find_best_individual(generation)
-        #generation = create_next_generation_allrandom(generation, map_of_towns)
+
 
     print("Generacia: ", i)
     print("Fitness: ", find_best_individual(generation)[0])
