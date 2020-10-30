@@ -1,23 +1,30 @@
 from math import sqrt
 import random
 
-REPLICATION_PERCENTAGE = 10
 NEW_INDIVIDUALS_PERCENTAGE = 10
 MUTATION_PERCENTAGE = 30
 CROSSOVER_PERCENTAGE = 50
 
 NUMBER_OF_TOWNS = 10
-NUMBER_OF_INDIVIDUALS = 10
+NUMBER_OF_INDIVIDUALS = 1000
 NUMBER_OF_GENERATIONS = 200
 
 
 # nacita mapu zo suboru v tvare {i: [x, y], ...}
-def load_map(p_dictionary: {}, p_filename: ""):
+def load_map(p_matrix: [], p_filename: ""):
     global NUMBER_OF_TOWNS
     loaded_file = open(p_filename, "r").read().split('\n')
-
+    towns = []
     for i in range(0, len(loaded_file)):
-        p_dictionary[i+1] = [int(coor) for coor in loaded_file[i].split(' ')]
+        towns.append([int(coor) for coor in loaded_file[i].split(' ')])
+
+    for i in range(0, len(towns)):
+        p_matrix.append([])
+        for j in range(0, len(towns)):
+            if i == j:
+                p_matrix[i].append(0)
+            else:
+                p_matrix[i].append(euclid_distance(towns[i], towns[j]))
 
     NUMBER_OF_TOWNS= len(loaded_file)
 
@@ -94,16 +101,12 @@ def do_difficult_mutation(chromosome: []) -> list:
 
 
 # vyrata fitness pre jeden chromozom
-def fitness(chromosome: [], map: {}) -> float:
+def fitness(chromosome: [], map: []) -> float:
     sum = 0
     for i in range(0, NUMBER_OF_TOWNS - 1):
-        coor_first = map[chromosome[i]]
-        coor_second = map[chromosome[i + 1]]
-        sum += euclid_distance(coor_first, coor_second)
+        sum += map[chromosome[i]-1][chromosome[i + 1]-1]
 
-    coor_first = map[chromosome[NUMBER_OF_TOWNS-1]]
-    coor_second = map[chromosome[0]]
-    sum += euclid_distance(coor_first, coor_second)
+    sum += map[chromosome[NUMBER_OF_TOWNS-1]-1][chromosome[0]-1]
     return 1/sum
 
 
@@ -114,50 +117,11 @@ def create_new_random_generation(generation: [], map: {}):
         generation.append([fitness(temp, map), temp])
 
 
-# vytvori novu generaciu pouzitim replikacie, mutacie alebo crossover
+# vytvori novu generaciu pouzitim noych jedincov, mutacie alebo crossover
 def create_next_generation_allrandom(generation: [], map: {}):
     generation = sorted(generation, reverse=True)
     new_generation = []
     for i in range(0, NUMBER_OF_INDIVIDUALS):
-        x = random.random()*(CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE + REPLICATION_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
-
-        # crossover
-        if x <= CROSSOVER_PERCENTAGE:
-            first_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
-            second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
-            while second_parent == first_parent:
-                second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
-            temp = do_crossover(generation[first_parent][1], generation[second_parent][1])
-            new_generation.append([fitness(temp, map), temp])
-
-        # mutation
-        elif x <= CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE:
-            temp = do_simple_mutation(generation[i][1])
-            new_generation.append([fitness(temp, map), temp])
-
-        # replication
-        elif x <= CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE + REPLICATION_PERCENTAGE:
-            new_generation.append(generation[i])
-
-        # new random individuals
-        elif x <= CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE + REPLICATION_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE:
-            temp = generate_random_chromosome()
-            new_generation.append([fitness(temp, map), temp])
-
-    return new_generation
-
-
-# vytvori novu generaciu pouzitim replikacie, mutacie alebo crossover
-def create_next_generation_firstngood(generation: [], map: {}):
-    generation = sorted(generation, reverse=True)
-    new_generation = []
-    num_of_best = (random.random()*NUMBER_OF_INDIVIDUALS) % (NUMBER_OF_INDIVIDUALS/2) + 1
-    for i in range(0, NUMBER_OF_INDIVIDUALS):
-        # replication
-        if i < num_of_best:
-            new_generation.append(generation[i])
-            continue
-
         x = random.random()*(CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
 
         # crossover
@@ -182,6 +146,44 @@ def create_next_generation_firstngood(generation: [], map: {}):
     return new_generation
 
 
+# vytvori novu generaciu pouzitim vyberu n najlepsich, crossover a novych jedincov a nasledne pouzije mutacie na vsetky
+def create_next_generation_firstngood(generation: [], map: {}):
+    generation = sorted(generation, reverse=True)
+    new_generation = []
+    num_of_best = (random.random()*NUMBER_OF_INDIVIDUALS) % (NUMBER_OF_INDIVIDUALS/2) + 1
+    num_of_best = NUMBER_OF_INDIVIDUALS*0.4
+    for i in range(0, NUMBER_OF_INDIVIDUALS):
+        # replication
+        if i < num_of_best:
+            new_generation.append(generation[i])
+            continue
+
+        x = random.random()*(CROSSOVER_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
+
+        # crossover
+        if x <= CROSSOVER_PERCENTAGE:
+            first_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+            second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+            while second_parent == first_parent:
+                second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+            temp = do_crossover(generation[first_parent][1], generation[second_parent][1])
+
+        # new random individuals
+        elif x <= CROSSOVER_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE:
+            temp = generate_random_chromosome()
+
+        new_generation.append([fitness(temp, map), temp])
+
+    generation = new_generation
+    new_generation = []
+
+    for i in range(0, NUMBER_OF_INDIVIDUALS):
+        temp = do_simple_mutation(generation[i][1])
+        new_generation.append([fitness(temp, map), temp])
+
+    return new_generation
+
+
 # vrati najlepsieho jedinca v generacii
 def find_best_individual(generation: []):
     return sorted(generation, reverse=True)[0]
@@ -189,7 +191,7 @@ def find_best_individual(generation: []):
 
 # vytvara generacie a vypisuje vzdy najlepsieho jedinca
 def create_society():
-    map_of_towns = {}
+    map_of_towns = []
     load_map(map_of_towns, "vstup.txt")
 
     generation = []
@@ -199,11 +201,12 @@ def create_society():
     print("Cesta: ", find_best_individual(generation)[1])
 
     for i in range(1, NUMBER_OF_GENERATIONS):
-        #generation = create_next_generation_firstngood(generation, map_of_towns)
-        generation = create_next_generation_allrandom(generation, map_of_towns)
-        print("Generacia: ", i)
-        print("Fitness: ", find_best_individual(generation)[0])
-        print("Cesta: ", find_best_individual(generation)[1])
+        generation = create_next_generation_firstngood(generation, map_of_towns)
+        #generation = create_next_generation_allrandom(generation, map_of_towns)
+
+    print("Generacia: ", i)
+    print("Fitness: ", find_best_individual(generation)[0])
+    print("Cesta: ", find_best_individual(generation)[1])
 
 
 random.seed(0)
