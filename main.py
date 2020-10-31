@@ -5,12 +5,12 @@ from gui import make_gui
 from kruskal import load_edges
 from input_creator import create_input_file
 
-NEW_INDIVIDUALS_PERCENTAGE = 10
-MUTATION_PERCENTAGE = 10
-CROSSOVER_PERCENTAGE = 90
-TOURNAMENT_INDIVIDUALS_PERCENTAGE = 60
+NEW_INDIVIDUALS_PERCENTAGE = 0.1
+MUTATION_PERCENTAGE = 0.1
+CROSSOVER_PERCENTAGE = 0.9
+TOURNAMENT_INDIVIDUALS_PERCENTAGE = 0.6
 
-NUMBER_OF_TOWNS = 40
+NUMBER_OF_TOWNS = 5
 NUMBER_OF_INDIVIDUALS = 500
 NUMBER_OF_GENERATIONS = 10000
 
@@ -53,9 +53,9 @@ def do_crossover(first_parent: [], second_parent: []) -> list:
     new_chromosome = []
 
     # zvoli nahodnu dlzku vymeneneho retazca
-    len_change = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 2) + 2
+    len_change = random.randint(2, NUMBER_OF_TOWNS - 1)
     # zvoli nahodny zaciatok
-    start_index = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - len_change + 1)
+    start_index = random.randint(0, NUMBER_OF_TOWNS - len_change)
 
     # vytvorti prazdny chromozom
     for i in range(0, NUMBER_OF_TOWNS):
@@ -88,7 +88,7 @@ def swap(chromosome: [], index1: int, index2: int):
 
 # vykona mutaciu dvoch miest vedla seba na jednom chromozome
 def do_simple_mutation(chromosome: []) -> list:
-    index = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 1)
+    index = random.randint(0, NUMBER_OF_TOWNS - 2)
     swap(chromosome, index, index + 1)
     return chromosome
 
@@ -97,14 +97,14 @@ def do_simple_mutation(chromosome: []) -> list:
 def do_difficult_mutation(chromosome: []) -> list:
     reversed_seq = []
     # zvoli nahodnu dlzku retazca, ktory bude obrateny (od 2 po NUMBER_OF_TOWNS-1)
-    len_change = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 2) + 2
+    len_change = random.randint(2, NUMBER_OF_TOWNS - 1)
     # zvoli nahodny zaciatok
-    start_index = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - len_change + 1)
+    start_index = random.randint(0, NUMBER_OF_TOWNS - len_change)
 
-    for i in range(start_index, start_index + len_change):
+    for i in range(start_index, start_index + len_change-1):
         reversed_seq.insert(0, chromosome[i])
 
-    for i in range(start_index, start_index + len_change):
+    for i in range(start_index, start_index + len_change-1):
         chromosome[i] = reversed_seq[i - start_index]
 
     return chromosome
@@ -149,14 +149,14 @@ def create_next_generation_allrandom(generation: [], map: []):
     generation = sorted(generation, reverse=True)
     new_generation = []
     for i in range(0, NUMBER_OF_INDIVIDUALS):
-        x = random.random()*(CROSSOVER_PERCENTAGE + MUTATION_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
+        x = random.random()
 
         # crossover
         if x <= CROSSOVER_PERCENTAGE:
-            first_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
-            second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+            first_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
+            second_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
             while second_parent == first_parent:
-                second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+                second_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
             temp = do_crossover(generation[first_parent][1], generation[second_parent][1])
             new_generation.append([fitness(temp, map), temp])
 
@@ -177,7 +177,6 @@ def create_next_generation_allrandom(generation: [], map: []):
 def create_next_generation_firstngood(generation: [], map: []):
     generation = sorted(generation, reverse=True)
     new_generation = []
-    num_of_best = (random.random()*NUMBER_OF_INDIVIDUALS) % (NUMBER_OF_INDIVIDUALS/2) + 1
     num_of_best = NUMBER_OF_INDIVIDUALS*0.4
     for i in range(0, NUMBER_OF_INDIVIDUALS):
         # replication
@@ -187,14 +186,14 @@ def create_next_generation_firstngood(generation: [], map: []):
             new_generation.append([fitness(temp, map), temp])
             continue
 
-        x = random.random()*(CROSSOVER_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
+        x = random.random()
 
         # crossover
         if x <= CROSSOVER_PERCENTAGE:
-            first_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
-            second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+            first_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
+            second_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
             while second_parent == first_parent:
-                second_parent = int(random.random() * NUMBER_OF_INDIVIDUALS) % NUMBER_OF_INDIVIDUALS
+                second_parent = random.randint(0, NUMBER_OF_INDIVIDUALS-1)
             temp = do_crossover(generation[first_parent][1], generation[second_parent][1])
 
         # new random individuals
@@ -236,13 +235,13 @@ def find_best_individual(generation: []):
 # vytvara generacie a vypisuje vzdy najlepsieho jedinca
 def create_society():
     map_of_towns = []
-    file_name = "nahodny.txt"
+    file_name = "vstup.txt"
     load_map(map_of_towns, file_name)
     #load_map(map_of_towns, create_input_file(file_name, 200, NUMBER_OF_TOWNS))
 
     generation = []
-    create_zero_random_generation(generation, map_of_towns)
-    #create_kruskal_random_generation(generation, map_of_towns)
+    #create_zero_random_generation(generation, map_of_towns)
+    create_kruskal_random_generation(generation, map_of_towns)
     print("Generacia: 0")
     print("Fitness: ", find_best_individual(generation)[0])
     print("Cesta: ", find_best_individual(generation)[1])
