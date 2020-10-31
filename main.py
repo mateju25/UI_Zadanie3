@@ -1,9 +1,11 @@
 from math import sqrt
 import random
+import time
 from gui import make_gui
+from kruskal import load_edges
 
 NEW_INDIVIDUALS_PERCENTAGE = 10
-MUTATION_PERCENTAGE = 30
+MUTATION_PERCENTAGE = 10
 CROSSOVER_PERCENTAGE = 90
 
 NUMBER_OF_TOWNS = 10
@@ -50,6 +52,7 @@ def do_crossover(first_parent: [], second_parent: []) -> list:
 
     # zvoli nahodnu dlzku vymeneneho retazca
     len_change = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - 2) + 2
+    len_change = int(NUMBER_OF_TOWNS*0.4)
     # zvoli nahodny zaciatok
     start_index = int(random.random() * NUMBER_OF_TOWNS) % (NUMBER_OF_TOWNS - len_change + 1)
 
@@ -111,10 +114,17 @@ def fitness(chromosome: [], map: []) -> float:
     return 1/sum
 
 
-# vytvori nahodnu generaciu, pouzite pri nultej generacii
-def create_new_random_generation(generation: [], map: {}):
+# vytvori nahodnu generaciu, pouzitie pri nultej generacii
+def create_zero_random_generation(generation: [], map: {}):
     for i in range(0, NUMBER_OF_INDIVIDUALS):
         temp = generate_random_chromosome()
+        generation.append([fitness(temp, map), temp])
+
+
+# vytvori nahodnu nultu generaciu, pouzitim kruskalovho algortimu
+def create_kruskal_random_generation(generation: [], map: {}):
+    for i in range(0, NUMBER_OF_INDIVIDUALS):
+        temp = do_simple_mutation(load_edges(map))
         generation.append([fitness(temp, map), temp])
 
 
@@ -156,7 +166,8 @@ def create_next_generation_firstngood(generation: [], map: {}):
     for i in range(0, NUMBER_OF_INDIVIDUALS):
         # replication
         if i < num_of_best:
-            new_generation.append(generation[i])
+            temp = do_simple_mutation(generation[i][1])
+            new_generation.append([fitness(temp, map), temp])
             continue
 
         x = random.random()*(CROSSOVER_PERCENTAGE + NEW_INDIVIDUALS_PERCENTAGE)
@@ -175,13 +186,6 @@ def create_next_generation_firstngood(generation: [], map: {}):
 
         new_generation.append([fitness(temp, map), temp])
 
-    generation = new_generation
-    new_generation = []
-
-    for i in range(0, NUMBER_OF_INDIVIDUALS):
-        temp = do_simple_mutation(generation[i][1])
-        new_generation.append([fitness(temp, map), temp])
-
     return new_generation
 
 
@@ -196,17 +200,23 @@ def create_society():
     load_map(map_of_towns, "vstup.txt")
 
     generation = []
-    create_new_random_generation(generation, map_of_towns)
+    #create_zero_random_generation(generation, map_of_towns)
+    create_kruskal_random_generation(generation, map_of_towns)
     print("Generacia: 0")
     print("Fitness: ", find_best_individual(generation)[0])
     print("Cesta: ", find_best_individual(generation)[1])
+    start = time.time()
     best = find_best_individual(generation)
     for i in range(1, NUMBER_OF_GENERATIONS):
         generation = create_next_generation_firstngood(generation, map_of_towns)
-        # generation = create_next_generation_allrandom(generation, map_of_towns)
+        #generation = create_next_generation_allrandom(generation, map_of_towns)
         if find_best_individual(generation)[0] > best[0]:
             best = find_best_individual(generation)
-
+    end = time.time()
+    print()
+    print("Generacii: ", NUMBER_OF_GENERATIONS, "| Jedincov: ", NUMBER_OF_INDIVIDUALS,
+          "| Mesta: ", NUMBER_OF_TOWNS, "| Cas: ", end - start)
+    print()
 
     print("Generacia: ", i)
     print("Fitness: ", find_best_individual(generation)[0])
