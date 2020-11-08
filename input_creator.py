@@ -9,3 +9,7 @@ def create_input_file(file_name: '', size_of_map, num_of_towns):
             f.write("\n")
     f.close()
     return file_name
+
+
+num_of_towns = int(input("Zadaj počet miest: "))
+create_input_file(input("Zadaj meno súboru: "), 200, num_of_towns)

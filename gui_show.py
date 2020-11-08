@@ -19,17 +19,17 @@ def print_path(canvas, path: [], file_name):
     for x in range(10, SIZE, 10):
         canvas.create_line(x, 0, x, SIZE, fill='lightgrey')
 
-    for x in map_of_points:
-        canvas.create_oval(CONSTANT*(map_of_points[x][0])-2, CONSTANT*(map_of_points[x][1])-2,
-                           CONSTANT*(map_of_points[x][0])+2, CONSTANT*(map_of_points[x][1])+2, fill="black")
-        canvas.create_text(CONSTANT*(map_of_points[x][0]), CONSTANT*(map_of_points[x][1])+12, fill="red",
-                           font="Times 8 italic bold", text=str(x))
-
     for x in range(0, len(path)-1):
         canvas.create_line(CONSTANT*map_of_points[path[x]][0], CONSTANT*map_of_points[path[x]][1],
                            CONSTANT*map_of_points[path[x+1]][0], CONSTANT*map_of_points[path[x+1]][1], width=2)
     canvas.create_line(CONSTANT*map_of_points[path[len(path)-1]][0], CONSTANT*map_of_points[path[len(path)-1]][1],
                        CONSTANT*map_of_points[path[0]][0], CONSTANT*map_of_points[path[0]][1], width=2)
+
+    for x in map_of_points:
+        canvas.create_oval(CONSTANT*(map_of_points[x][0])-2, CONSTANT*(map_of_points[x][1])-2,
+                           CONSTANT*(map_of_points[x][0])+2, CONSTANT*(map_of_points[x][1])+2, fill="black")
+        canvas.create_text(CONSTANT*(map_of_points[x][0])+5, CONSTANT*(map_of_points[x][1])+12, fill="red",
+                           font="Times 8 italic bold", text=str(x))
 
 
 def make_gui(path: [], file_name):
