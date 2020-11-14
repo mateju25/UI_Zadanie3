@@ -11,7 +11,7 @@ CROSSOVER_PERCENTAGE = 0.5  # percenta, kolko jedincov bude vytvorenych pomocou 
 ELITISM_PERCENTAGE = 0.4  # percenta, kolko jedincov bude vytvorenych pomocou elitizmu
 TOURNAMENT_PERCENTAGE = 0  # percenta, kolko jedincov bude vytvorenych pomocou tournamentu
 ROULETE_PERCENTAGE = 0  # percenta, kolko jedincov bude vytvorenych pomocou roulete
-MUTATION_PERCENTAGE = 0.4  # percenta, kolko jedincov v elitizmu bude zmutovanych
+MUTATION_PERCENTAGE = 0.05  # percenta, kolko jedincov v elitizmu bude zmutovanych
 MUTATION_TYPE = 1  # typ mutacie
 TOURNAMENT_INDIVIDUAL_PERCENTAGE = 0.4  # kolko percent z generacie bude vybratych do tournamentu
 
@@ -185,16 +185,7 @@ def create_next_generation(generation: [], p_map: []):
 
     # elitism
     for i in range(0, int(NUMBER_OF_INDIVIDUALS * ELITISM_PERCENTAGE)):
-        if random.random() < MUTATION_PERCENTAGE:
-            if MUTATION_TYPE == 1:
-                temp = do_simple_mutation(generation[i][1])
-            elif MUTATION_TYPE == 2:
-                temp = do_random_mutation(generation[i][1])
-            else:
-                temp = do_difficult_mutation(generation[i][1])
-            new_generation.append([fitness(temp, p_map), temp])
-        else:
-            new_generation.append(generation[i])
+        new_generation.append(generation[i])
 
     # pure crossover
     for i in range(0, int(NUMBER_OF_INDIVIDUALS * CROSSOVER_PERCENTAGE)):
@@ -220,6 +211,16 @@ def create_next_generation(generation: [], p_map: []):
         temp = generate_random_chromosome()
         new_generation.append([fitness(temp, p_map), temp])
 
+    for i in range(0, NUMBER_OF_INDIVIDUALS):
+        if random.random() < MUTATION_PERCENTAGE:
+            if MUTATION_TYPE == 1:
+                temp = do_simple_mutation(new_generation[i][1])
+            elif MUTATION_TYPE == 2:
+                temp = do_random_mutation(new_generation[i][1])
+            else:
+                temp = do_difficult_mutation(new_generation[i][1])
+            new_generation[i] = [fitness(temp, p_map), temp]
+
     return new_generation
 
 
@@ -232,11 +233,11 @@ def find_best_individual(generation: []):
 
 
 # vrati priemer fitness funkcii
-def find_average_fitness(generation: []):
+def find_average_fitness(generation: [], num):
     sum_of_nums = 0
     for x in generation:
-        sum_of_nums += x[0]
-    return sum_of_nums / NUMBER_OF_GENERATIONS
+        sum_of_nums += x
+    return sum_of_nums / num
 
 
 # vypise info o generacii
@@ -248,7 +249,7 @@ def print_generation_info(pos: int, generation: []):
 
 
 # vytvara generacie a vypisuje vzdy najlepsieho jedinca
-def create_society(file_name, choice):
+def create_society(file_name, choice, iter):
     map_of_towns = []
     generation = []
     average = []
@@ -261,8 +262,9 @@ def create_society(file_name, choice):
     create_zero_random_generation(generation, map_of_towns)
     best = find_best_individual(generation)
     bests.append(best[0])
-    average.append(find_average_fitness(generation))
-    print_generation_info(0, generation)
+    average.append(find_average_fitness([x[0] for x in generation], NUMBER_OF_GENERATIONS))
+    if iter == 1:
+        print_generation_info(0, generation)
 
     start = time.time()
 
@@ -270,8 +272,9 @@ def create_society(file_name, choice):
     for i in range(1, NUMBER_OF_GENERATIONS):
         generation = create_next_generation(generation, map_of_towns)
         if choice == 'y':
-            print_generation_info(i, generation)
-        average.append(find_average_fitness(generation))
+            if iter == 1:
+                print_generation_info(i, generation)
+        average.append(find_average_fitness([x[0] for x in generation], NUMBER_OF_GENERATIONS))
         bests.append(find_best_individual(generation)[0])
         # pamata si najlepsieho
         if find_best_individual(generation)[0] > best[0]:
@@ -279,29 +282,32 @@ def create_society(file_name, choice):
 
     end = time.time()
 
-    # vypise koncove zhodnotenie
-    print("-----------------------------------------")
-    print("Generacii: ", NUMBER_OF_GENERATIONS, "| Jedincov: ", NUMBER_OF_INDIVIDUALS,
-          "| Mesta: ", NUMBER_OF_TOWNS, "| Cas: ", end - start, "s")
-    print("\nNajlepsi: ")
-    print("Fitness: ", best[0])
-    print("Cesta: ", best[1])
+    if iter == 1:
+        # vypise koncove zhodnotenie
+        print("-----------------------------------------")
+        print("Generacii: ", NUMBER_OF_GENERATIONS, "| Jedincov: ", NUMBER_OF_INDIVIDUALS,
+            "| Mesta: ", NUMBER_OF_TOWNS, "| Cas: ", end - start, "s")
+        print("\nNajlepsi: ")
+        print("Fitness: ", best[0])
+        print("Cesta: ", best[1])
 
-    # vytvori thread pre gui zobrazenie cesty
-    t1 = threading.Thread(target=make_gui, args=(best[1], file_name))
-    t1.start()
+        # vytvori thread pre gui zobrazenie cesty
+        t1 = threading.Thread(target=make_gui, args=(best[1], file_name))
+        t1.start()
 
-    # vytvori graf priemerne a najlepsie fitness
-    f, axis = plt.subplots()
-    axis.plot(average, label="Priemerne")
-    axis.plot(bests, label="Najlepsi")
-    axis.set(xlabel='Generations', ylabel='Fitness',
+        # vytvori graf priemerne a najlepsie fitness
+        f, axis = plt.subplots()
+        axis.plot(average, label="Priemerne")
+        axis.plot(bests, label="Najlepsi")
+        axis.set(xlabel='Generations', ylabel='Fitness',
              title='Generation with {} individuals vs. Fitness '.format(NUMBER_OF_INDIVIDUALS))
-    axis.grid()
-    plt.legend()
-    plt.show()
+        axis.grid()
+        plt.legend()
+        plt.show()
 
-    t1.join()
+        t1.join()
+
+    return average, bests
 
 
 # vypise hlavicku
@@ -360,10 +366,36 @@ def menu():
     MUTATION_TYPE = is_input_number("Zadaj možnosť: ", True)
     print()
     choice = input("Chceš vypísať všetky generacie? y/iné: ")
+    iterable = int(input("Zadaj počet opakovaní: "))
     print()
+    average = []
+    bests = []
+    for i in range(0, NUMBER_OF_GENERATIONS):
+        average.append([])
+        bests.append([])
 
-    create_society(file_name, choice)
+    for i in range(0, iterable):
+        temp_average, temp_bests = create_society(file_name, choice, iterable)
+        for x in range(0, len(temp_average)):
+            average[x].append(temp_average[x])
+        for x in range(0, len(temp_bests)):
+            bests[x].append(temp_bests[x])
 
+    for x in range(0, len(average)):
+        sum = find_average_fitness(average[x], iterable)
+        average[x] = sum
+    for x in range(0, len(bests)):
+        sum = find_average_fitness(bests[x], iterable)
+        bests[x] = sum
+
+    f, axis = plt.subplots()
+    axis.plot(average, label="Priemerne")
+    axis.plot(bests, label="Najlepsi")
+    axis.set(xlabel='Generations', ylabel='Fitness',
+             title='Generation with {} individuals vs. Fitness\n ELIT {} CROSS {} TOUR {} ROULETE {}\n MUTATION {} TYPE {} TOUR_SELECT {}  '.format(NUMBER_OF_INDIVIDUALS, ELITISM_PERCENTAGE, CROSSOVER_PERCENTAGE, TOURNAMENT_PERCENTAGE, ROULETE_PERCENTAGE, MUTATION_PERCENTAGE, MUTATION_TYPE, TOURNAMENT_INDIVIDUAL_PERCENTAGE))
+    axis.grid()
+    plt.legend()
+    plt.show()
 
 # endregion
 
