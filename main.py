@@ -13,7 +13,7 @@ TOURNAMENT_PERCENTAGE = 0  # percenta, kolko jedincov bude vytvorenych pomocou t
 ROULETE_PERCENTAGE = 0  # percenta, kolko jedincov bude vytvorenych pomocou roulete
 MUTATION_PERCENTAGE = 0.05  # percenta, kolko jedincov v elitizmu bude zmutovanych
 MUTATION_TYPE = 1  # typ mutacie
-TOURNAMENT_INDIVIDUAL_PERCENTAGE = 0.4  # kolko percent z generacie bude vybratych do tournamentu
+TOURNAMENT_INDIVIDUAL_PERCENTAGE = 0  # kolko percent z generacie bude vybratych do tournamentu
 
 NUMBER_OF_TOWNS = 50  # pocet miest
 NUMBER_OF_INDIVIDUALS = 1000  # pocet individualov
@@ -150,25 +150,32 @@ def do_roulete(generation: []):
 
 # vytvori novu generaciu vytvorenim turnajov o n jedincoch a vzdy vyhraju dvaja a pouzijem na nich crossover
 def do_tournament(generation: []):
-    first_parent = \
-        sorted(random.choices(generation, k=int(TOURNAMENT_INDIVIDUAL_PERCENTAGE * NUMBER_OF_INDIVIDUALS)),
-               reverse=True)[
-            0][1]
-    second_parent = \
-        sorted(random.choices(generation, k=int(TOURNAMENT_INDIVIDUAL_PERCENTAGE * NUMBER_OF_INDIVIDUALS)),
-               reverse=True)[
-            0][1]
+    tournament = sorted(random.choices(generation, k=int(TOURNAMENT_INDIVIDUAL_PERCENTAGE * NUMBER_OF_INDIVIDUALS)),
+               reverse=True)
+    first_parent = tournament[0][1]
+    second_parent = tournament[1][1]
+    i = 2
+    while first_parent == second_parent:
+        second_parent = tournament[i][1]
+        i += 1
+        if i == int(TOURNAMENT_INDIVIDUAL_PERCENTAGE * NUMBER_OF_INDIVIDUALS):
+            break
     return do_crossover(first_parent, second_parent)
 
 
 # vyrata fitness pre jeden chromozom
 def fitness(chromosome: [], p_map: []) -> float:
+    return 1 / sum_of_path(chromosome, p_map)
+
+
+# vyrata cenu cesty
+def sum_of_path(chromosome: [], p_map: []) -> float:
     sum_of_nums = 0
     for i in range(0, NUMBER_OF_TOWNS - 1):
         sum_of_nums += p_map[chromosome[i] - 1][chromosome[i + 1] - 1]
 
     sum_of_nums += p_map[chromosome[NUMBER_OF_TOWNS - 1] - 1][chromosome[0] - 1]
-    return 1 / sum_of_nums
+    return sum_of_nums
 
 
 # vytvori nahodnu generaciu, pouzitie pri nultej generacii
@@ -211,6 +218,7 @@ def create_next_generation(generation: [], p_map: []):
         temp = generate_random_chromosome()
         new_generation.append([fitness(temp, p_map), temp])
 
+    # mutacia
     for i in range(0, NUMBER_OF_INDIVIDUALS):
         if random.random() < MUTATION_PERCENTAGE:
             if MUTATION_TYPE == 1:
@@ -271,9 +279,10 @@ def create_society(file_name, choice, iter):
     # vytvara postupne generacie
     for i in range(1, NUMBER_OF_GENERATIONS):
         generation = create_next_generation(generation, map_of_towns)
-        if choice == 'y':
-            if iter == 1:
+        if iter == 1:
+            if choice == 'y':
                 print_generation_info(i, generation)
+              
         average.append(find_average_fitness([x[0] for x in generation], NUMBER_OF_GENERATIONS))
         bests.append(find_best_individual(generation)[0])
         # pamata si najlepsieho
@@ -283,29 +292,18 @@ def create_society(file_name, choice, iter):
     end = time.time()
 
     if iter == 1:
+        print_generation_info(NUMBER_OF_GENERATIONS-1, generation)
         # vypise koncove zhodnotenie
         print("-----------------------------------------")
-        print("Generacii: ", NUMBER_OF_GENERATIONS, "| Jedincov: ", NUMBER_OF_INDIVIDUALS,
-            "| Mesta: ", NUMBER_OF_TOWNS, "| Cas: ", end - start, "s")
-        print("\nNajlepsi: ")
+        print("Generacií: ", NUMBER_OF_GENERATIONS, "| Jedincov: ", NUMBER_OF_INDIVIDUALS,
+            "| Mesta: ", NUMBER_OF_TOWNS, "| Čas: ", end - start, "s")
+        print("\nNajlepší: ")
         print("Fitness: ", best[0])
+        print("Dĺžka cesty: ", sum_of_path(best[1], map_of_towns))
         print("Cesta: ", best[1])
 
         # vytvori thread pre gui zobrazenie cesty
-        t1 = threading.Thread(target=make_gui, args=(best[1], file_name))
-        t1.start()
-
-        # vytvori graf priemerne a najlepsie fitness
-        f, axis = plt.subplots()
-        axis.plot(average, label="Priemerne")
-        axis.plot(bests, label="Najlepsi")
-        axis.set(xlabel='Generations', ylabel='Fitness',
-             title='Generation with {} individuals vs. Fitness '.format(NUMBER_OF_INDIVIDUALS))
-        axis.grid()
-        plt.legend()
-        plt.show()
-
-        t1.join()
+        make_gui(best[1], file_name)
 
     return average, bests
 
