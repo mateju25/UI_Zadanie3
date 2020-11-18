@@ -5,7 +5,6 @@ import random
 import time
 from gui_show import make_gui
 import matplotlib.pyplot as plt
-import threading
 
 CROSSOVER_PERCENTAGE = 0.5  # percenta, kolko jedincov bude vytvorenych pomocou crossover
 ELITISM_PERCENTAGE = 0.4  # percenta, kolko jedincov bude vytvorenych pomocou elitizmu
@@ -155,6 +154,7 @@ def do_tournament(generation: []):
     first_parent = tournament[0][1]
     second_parent = tournament[1][1]
     i = 2
+    # najdi druheho najlepsieho rodica ale ineho od prveho
     while first_parent == second_parent:
         second_parent = tournament[i][1]
         i += 1
@@ -240,8 +240,8 @@ def find_best_individual(generation: []):
     return sorted(generation, reverse=True)[0]
 
 
-# vrati priemer fitness funkcii
-def find_average_fitness(generation: [], num):
+# vrati priemer zoznamu (pouzite na priemer fitness a na priemer z priemerov pri viacnasobnom behu)
+def find_average(generation: [], num):
     sum_of_nums = 0
     for x in generation:
         sum_of_nums += x
@@ -270,7 +270,7 @@ def create_society(file_name, choice, iter):
     create_zero_random_generation(generation, map_of_towns)
     best = find_best_individual(generation)
     bests.append(best[0])
-    average.append(find_average_fitness([x[0] for x in generation], NUMBER_OF_GENERATIONS))
+    average.append(find_average([x[0] for x in generation], NUMBER_OF_GENERATIONS))
     if iter == 1:
         print_generation_info(0, generation)
 
@@ -283,7 +283,7 @@ def create_society(file_name, choice, iter):
             if choice == 'y':
                 print_generation_info(i, generation)
               
-        average.append(find_average_fitness([x[0] for x in generation], NUMBER_OF_GENERATIONS))
+        average.append(find_average([x[0] for x in generation], NUMBER_OF_GENERATIONS))
         bests.append(find_best_individual(generation)[0])
         # pamata si najlepsieho
         if find_best_individual(generation)[0] > best[0]:
@@ -302,7 +302,7 @@ def create_society(file_name, choice, iter):
         print("Dĺžka cesty: ", sum_of_path(best[1], map_of_towns))
         print("Cesta: ", best[1])
 
-        # vytvori thread pre gui zobrazenie cesty
+        # vytvori gui zobrazenie cesty
         make_gui(best[1], file_name)
 
     return average, bests
@@ -374,18 +374,21 @@ def menu():
 
     for i in range(0, iterable):
         temp_average, temp_bests = create_society(file_name, choice, iterable)
+        # zozbiera jednotlive behy
         for x in range(0, len(temp_average)):
             average[x].append(temp_average[x])
         for x in range(0, len(temp_bests)):
             bests[x].append(temp_bests[x])
 
+    # vyrata priemer
     for x in range(0, len(average)):
-        sum = find_average_fitness(average[x], iterable)
+        sum = find_average(average[x], iterable)
         average[x] = sum
     for x in range(0, len(bests)):
-        sum = find_average_fitness(bests[x], iterable)
+        sum = find_average(bests[x], iterable)
         bests[x] = sum
 
+    # vytvori graf
     f, axis = plt.subplots()
     axis.plot(average, label="Priemerne")
     axis.plot(bests, label="Najlepsi")
